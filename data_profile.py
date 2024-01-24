@@ -18,6 +18,6 @@ if __name__ == "__main__":
     # missing values are represented by 99/-99 in the dataset
     data = pd.read_csv('cfhtlens.csv', na_values=[99,-99])
 
-    #Describe(data) # mean, median, max, min, num_of_missing values
+    Describe(data) # mean, median, max, min, num_of_missing values
     #Graph(data) # Create Histogram
     

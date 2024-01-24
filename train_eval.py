@@ -48,9 +48,13 @@ def Predict(strategy):
     classifier = TrainRandomForest(X_train,Y_train)
     missing = np.isnan(X_test).any(axis=1)
     if strategy == 'abstain':
-        
         Y_predict = classifier.predict(X_test[~missing])
-        accuracy = len(Y_predict) / len(Y_test)
+
+        Y_predict_filled = np.full(Y_test.shape, np.nan)
+        Y_predict_filled[~missing] = Y_predict
+        Y_predict_filled[missing] = 0
+        
+        accuracy = accuracy_score(Y_predict_filled,Y_test)
         missing_accuracy = 0
         #print('Number if items missing are =', np.sum(missing))
     
