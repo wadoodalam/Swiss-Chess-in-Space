@@ -47,24 +47,47 @@ def Predict(strategy):
     X_train, X_test, Y_train, Y_test = TrainTestSplit(X,Y)
     classifier = TrainRandomForest(X_train,Y_train)
     missing = np.isnan(X_test).any(axis=1)
+
     if strategy == 'abstain':
         Y_predict = classifier.predict(X_test[~missing])
 
         Y_predict_filled = np.full(Y_test.shape, np.nan)
         Y_predict_filled[~missing] = Y_predict
         Y_predict_filled[missing] = 0
-        
+
         accuracy = accuracy_score(Y_predict_filled,Y_test)
         missing_accuracy = 0
-        #print('Number if items missing are =', np.sum(missing))
+        print('Number of items missing are =', np.sum(missing))
     
+
+
+
     if strategy == 'majorityClass':
         # Get the mode from train set, use the first value in the array
         mode_class = Y_train.mode().iloc[0]
+        
+        print("Num of 0's in the entire test set =",np.sum(Y_test == 0)) 
         # Create and fill in the predict np array using that mode
-        Y_predict = np.full(len(Y_test), mode_class)
+        Y_predict = np.full(Y_test.shape, mode_class)
+        c = 0
+        for pred,actual in zip(Y_predict,Y_test[missing]):
+            if pred == actual:
+                c+=1
+        print("number of 0's for the missing points in dataset(824) =",c)
+        '''
+        There are a total of 1202 0's in class_star test set and 824 with missing points. Since the majority class from train set predicts 0,
+        the accuracy for the entire test set will be  1202/2000 = 0.601
+        Out of the 824 missing points in the test set, the class_star has value of 0 336 times.
+        the accuracy for missing points in the test set will be 336/824 = 0.4077
+        '''
+
         accuracy = accuracy_score(Y_test, Y_predict)
-        missing_accuracy = 99
+        missing_accuracy = accuracy_score(Y_test[missing], Y_predict[missing])
+    
+    
+    
+    
+    
     
     if strategy == 'omitFeatures':
         # with omitFeatures set to true, getting the split accordingly
@@ -104,15 +127,41 @@ def Predict(strategy):
         missing_accuracy = accuracy_score(Y_test[missing], Y_predict[missing])
         accuracy = accuracy_score(Y_test,Y_predict)
 
-
-    return accuracy, missing_accuracy
+    formatted_accuracy = "{:.4f}".format(accuracy)
+    formatted_missing_accuracy = "{:.4f}".format(missing_accuracy)
+    return formatted_accuracy, formatted_missing_accuracy
 
 if __name__ == "__main__":
 
     
-    strategies = ['abstain','majorityClass', 'omitFeatures','imputeAvg','imputeNeighbor']
+    strategies = ['abstain','majorityClass','imputeAvg','imputeNeighbor', 'omitFeatures']
     strategyAccuracy = []
     for strategy in strategies: 
         accuracy,missing_accuracy = Predict(strategy)
         strategyAccuracy.append((strategy,accuracy,missing_accuracy))
     print(strategyAccuracy)
+
+
+    X,Y = LoadData()
+    X_train, X_test, Y_train, Y_test = TrainTestSplit(X,Y)
+    classifier = TrainRandomForest(X_train,Y_train)
+    
+    
+    '''
+    SELECT
+    top 10
+    id, pos, CLASS_STAR, PSF_e1, PSF_e2, fitclass, scalelength, model_flux, MAG_u, MAG_g, MAG_r, MAG_i, MAG_z
+    FROM
+    cfht.clens
+    WHERE
+    fitclass>=1
+    AND contains(pos,circle('ICRS GEOCENTER',135.176,-1.9724,0.0028))=1
+    Luckily, no missing data for my query. The result is in the csv file
+    '''
+    feature_vector = np.array([ 0.0096, -0.0036, 0, 30.9, 26.2125, 23.7822, 22.6081, 21.9143, 21.6]).reshape(1, -1)
+    prediction = classifier.predict(feature_vector)
+    if prediction == 1:
+        print("It is a Galaxy")
+    elif prediction == 0:
+         print("It is a Star")
+
